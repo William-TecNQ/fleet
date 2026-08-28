@@ -33,6 +33,7 @@ interface IAdvancedConfigFormData {
   preserveHostActivitiesOnReenrollment: boolean;
   disableHostsActive: boolean;
   disableVulnerabilities: boolean;
+  enableLocalServeFleetd: boolean;
 }
 
 interface IAdvancedConfigFormErrors {
@@ -46,6 +47,10 @@ export interface IAdvancedSectionProps {
   isPremiumTier?: boolean;
   onInputChange: AdvancedInputChangeFn;
   onInputBlur?: () => void;
+  onSyncClick?: (
+    evt: React.MouseEvent<HTMLButtonElement, React.MouseEvent>
+  ) => void;
+  showSyncSpinner?: boolean;
   formData: IAdvancedConfigFormData;
   formErrors?: IAdvancedConfigFormErrors;
   appConfig?: IConfig;
@@ -134,6 +139,8 @@ const Advanced = ({
     disableVulnerabilities: !(
       appConfig.features?.historical_data?.vulnerabilities ?? true
     ),
+    enableLocalServeFleetd:
+      appConfig.server_settings.enable_local_serve_fleetd || false,
   });
 
   const [formErrors, setFormErrors] = useState<IAdvancedConfigFormErrors>({});
@@ -184,6 +191,7 @@ const Advanced = ({
         scripts_disabled: formData.disableScripts,
         deferred_save_host: appConfig.server_settings.deferred_save_host,
         ai_features_disabled: formData.disableAIFeatures,
+        enable_local_serve_fleetd: formData.enableLocalServeFleetd,
       },
       smtp_settings: {
         domain: formData.domain,
@@ -216,6 +224,7 @@ const Advanced = ({
       },
     };
     try {
+      console.log(payload);
       const ok = await handleSubmit(payload);
       if (ok) {
         setConfirmModalOpen(false);
@@ -244,6 +253,12 @@ const Advanced = ({
   };
 
   const isPremiumLicense = isPremiumTier(appConfig);
+  const [showSyncSpinner, setShowSyncSpinner] = useState(false);
+
+  const onSync = () => {
+    setShowSyncSpinner(true);
+    setTimeout(() => setShowSyncSpinner(false), 2000);
+  };
 
   return (
     <div>
@@ -263,6 +278,8 @@ const Advanced = ({
           formData={formData}
           onInputChange={onInputChange}
           onInputBlur={onInputBlur}
+          onSyncClick={onSync}
+          showSyncSpinner={showSyncSpinner}
           formErrors={formErrors}
           appConfig={appConfig}
         />

@@ -165,6 +165,7 @@ export interface IConfigServerSettings {
   query_reports_disabled: boolean;
   scripts_disabled: boolean;
   ai_features_disabled: boolean;
+  enable_local_serve_fleetd: boolean;
 }
 
 export interface IConfig {
