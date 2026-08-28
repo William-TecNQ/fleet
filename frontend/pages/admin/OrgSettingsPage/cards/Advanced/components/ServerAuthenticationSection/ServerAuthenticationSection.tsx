@@ -3,14 +3,69 @@ import SettingsSection from "pages/admin/components/SettingsSection";
 import GitOpsModeTooltipWrapper from "components/GitOpsModeTooltipWrapper";
 import InputField from "components/forms/fields/InputField";
 import Checkbox from "components/forms/fields/Checkbox";
+import Radio from "components/forms/fields/Radio";
+import classnames from "classnames";
+import TooltipWrapper from "components/TooltipWrapper";
+import Button from "components/buttons/Button";
 
 import { IAdvancedSectionProps } from "../../Advanced";
 
+const baseClass = "org-settings";
+
+interface ISyncButtonProps {
+  isDisabled: boolean;
+  isSyncing?: boolean;
+  tooltip?: React.ReactNode;
+  onSync?: (evt: React.MouseEvent<HTMLButtonElement, React.MouseEvent>) => void;
+}
+
+const SyncButton = ({
+  isDisabled,
+  isSyncing,
+  tooltip,
+  onSync,
+}: ISyncButtonProps) => {
+  const classNames = classnames({
+    "sync-spinner": isSyncing,
+    "sync-btn": !isSyncing,
+  });
+
+  const buttonText = isSyncing
+    ? "Syncing Fleetd...this may take a moment"
+    : "Sync Fleetd";
+
+  return (
+    <>
+      <TooltipWrapper
+        underline={false}
+        disableTooltip={!tooltip}
+        tipContent={tooltip}
+        position="top"
+        showArrow
+      >
+        <div className={`${baseClass}__sync`}>
+          <Button
+            className={classNames}
+            disabled={isDisabled || isSyncing}
+            onClick={onSync}
+            variant="secondary"
+            icon="refresh"
+          >
+            {buttonText}
+          </Button>
+        </div>
+      </TooltipWrapper>
+    </>
+  );
+};
+
 const ServerAuthenticationSection = ({
   formData,
-  onInputChange,
   formErrors = {},
+  onInputChange,
   onInputBlur,
+  onSyncClick,
+  showSyncSpinner,
   appConfig,
 }: IAdvancedSectionProps) => {
   const {
@@ -20,6 +75,30 @@ const ServerAuthenticationSection = ({
     verifySSLCerts,
     enableStartTLS,
   } = formData;
+
+  const renderSync = () => {
+    let isDisabled = false;
+
+    if (!formData.enableLocalServeFleetd) {
+      isDisabled = true;
+      return (
+        <SyncButton
+          isDisabled={isDisabled}
+          isSyncing={showSyncSpinner}
+          tooltip="Enable Fleet to locally serve Fleetd to sync"
+          onSync={onSyncClick}
+        />
+      );
+    }
+    return (
+      <SyncButton
+        isDisabled={isDisabled}
+        isSyncing={showSyncSpinner}
+        onSync={onSyncClick}
+      />
+    );
+  };
+
   return (
     <SettingsSection title="Server & authentication">
       <GitOpsModeTooltipWrapper
@@ -119,6 +198,36 @@ const ServerAuthenticationSection = ({
       >
         Enable STARTTLS
       </Checkbox>
+      <div className="form-field__label">Fleetd</div>
+      <fieldset className="form-field">
+        <Radio
+          id="enableLocalServeFleetd-0"
+          label="Serve Fleetd Remotely"
+          name="enableLocalServeFleetd"
+          value="RemoteServe"
+          checked={!formData.enableLocalServeFleetd}
+          onChange={(value) => {
+            onInputChange({
+              name: "enableLocalServeFleetd",
+              value: value === "LocalServe",
+            });
+          }}
+        />
+        <Radio
+          id="enableLocalServeFleetd-1"
+          label="Serve Fleetd Locally"
+          name="enableLocalServeFleetd"
+          value="LocalServe"
+          checked={formData.enableLocalServeFleetd}
+          onChange={(value) => {
+            onInputChange({
+              name: "enableLocalServeFleetd",
+              value: value === "LocalServe",
+            });
+          }}
+        />
+      </fieldset>
+      <div>{renderSync()}</div>
     </SettingsSection>
   );
 };
