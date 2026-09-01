@@ -96,4 +96,8 @@ export default {
       return axiosError.response;
     }
   },
+  syncFleetd: (): Promise<void> => {
+    const { FLEETD_SYNC } = endpoints;
+    return sendRequest("POST", FLEETD_SYNC);
+  },
 };

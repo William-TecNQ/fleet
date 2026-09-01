@@ -2,12 +2,14 @@ import React, { useMemo, useState } from "react";
 
 import { IInputFieldParseTarget } from "interfaces/form_field";
 import { HistoricalDataConfigKey } from "interfaces/charts";
+import configAPI from "services/entities/config";
 
 import validUrl from "components/forms/validators/valid_url";
 import Button from "components/buttons/Button";
 import ConfirmDataCollectionDisableModal from "components/ConfirmDataCollectionDisableModal";
 import { IConfig } from "interfaces/config";
 import { isPremiumTier } from "utilities/permissions/permissions";
+import { notify } from "components/ToastNotification";
 
 import { IAppConfigFormProps } from "../constants";
 import HostLifecycleSection from "./components/HostLifecycleSection";
@@ -224,7 +226,6 @@ const Advanced = ({
       },
     };
     try {
-      console.log(payload);
       const ok = await handleSubmit(payload);
       if (ok) {
         setConfirmModalOpen(false);
@@ -258,16 +259,11 @@ const Advanced = ({
   const onSync = async () => {
     setShowSyncSpinner(true);
     try {
-      await fetch("https://download.fleetdm.com/stable/meta.json", {
-        method: "GET",
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("Fetched metadata successfully", data);
-          setTimeout(() => setShowSyncSpinner(false), 2000);
-        });
+      await configAPI.syncFleetd();
+      notify.success("Successfully synced required Fleetd files");
     } catch {
-      console.error("Failed to fetch metadata");
+      notify.error("Failed to fetch required Fleetd files");
+    } finally {
       setShowSyncSpinner(false);
     }
   };

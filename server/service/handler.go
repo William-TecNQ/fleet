@@ -939,6 +939,8 @@ func attachFleetAPIRoutes(r *mux.Router, svc fleet.Service, config config.FleetC
 	ue.POST("/api/_version_/fleet/spec/certificate_authorities", batchApplyCertificateAuthoritiesEndpoint, batchApplyCertificateAuthoritiesRequest{})
 	ue.GET("/api/_version_/fleet/spec/certificate_authorities", getCertificateAuthoritiesSpecEndpoint, getCertificateAuthoritiesSpecRequest{})
 
+	ue.POST("/api/_version_/fleet/fleetd/sync", requestFleetdSyncEndpoint, nil)
+
 	mdmAndroidMW := ue.WithCustomMiddleware(mdmConfiguredMiddleware.VerifyAndroidMDM())
 	mdmAndroidMW.POST("/api/_version_/fleet/software/web_apps", createAndroidWebAppEndpoint, createAndroidWebAppRequest{})
 
@@ -1136,7 +1138,6 @@ func attachFleetAPIRoutes(r *mux.Router, svc fleet.Service, config config.FleetC
 	ne := newNoAuthEndpointer(svc, opts, r, apiVersions...)
 	ne.WithAltPaths("/api/v1/osquery/enroll").
 		POST("/api/osquery/enroll", enrollAgentEndpoint, contract.EnrollOsqueryAgentRequest{})
-	ne.POST("/api/_version_/fleet/fleetd/sync", requestFleetdSyncEndpoint, nil)
 	ne.GET("/api/_version_/fleet/fleetd/manifest", getFleetdManifestEndpoint, nil)
 	ne.GET("/api/_version_/fleet/fleetd/metadata", getFleetdMetadataEndpoint, nil)
 	ne.GET("/api/_version_/fleet/fleetd/package", getFleetdPackageEndpoint, nil)
