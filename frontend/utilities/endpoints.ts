@@ -30,6 +30,7 @@ export default {
   ENABLE_USER: (id: number): string => {
     return `/${API_VERSION}/fleet/users/${id}/enable`;
   },
+  FLEETD_SYNC: `/${API_VERSION}/fleet/fleetd/sync`,
   FORGOT_PASSWORD: `/${API_VERSION}/fleet/forgot_password`,
   GLOBAL_ENROLL_SECRETS: `/${API_VERSION}/fleet/spec/enroll_secret`,
   GLOBAL_POLICIES: `/${API_VERSION}/fleet/policies`,

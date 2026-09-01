@@ -97,6 +97,9 @@ func requestFleetdSyncEndpoint(ctx context.Context, req interface{}, svc fleet.S
 }
 
 func (svc *Service) SyncFleetd(ctx context.Context) error {
+	if err := svc.authz.Authorize(ctx, &fleet.AppConfig{}, fleet.ActionWrite); err != nil {
+		return err
+	}
 	// do manifest sync
 	err := svc.SyncFleetdManifest(ctx)
 	if err != nil {
