@@ -1011,7 +1011,11 @@ type ApplyMicrosoftGraphCredentialsFunc func(ctx context.Context, creds []fleet.
 
 type SyncFleetdFunc func(ctx context.Context) error
 
-type SyncFleetdManifestFunc func(ctx context.Context) (*string, error)
+type SyncFleetdManifestFunc func(ctx context.Context) error
+
+type SyncFleetdMetadataFunc func(ctx context.Context) error
+
+type SyncFleetdPackageFunc func(ctx context.Context) error
 
 type Service struct {
 	EnrollOsqueryFunc        EnrollOsqueryFunc
@@ -2501,6 +2505,12 @@ type Service struct {
 
 	SyncFleetdManifestFunc        SyncFleetdManifestFunc
 	SyncFleetdManifestFuncInvoked bool
+
+	SyncFleetdMetadataFunc        SyncFleetdMetadataFunc
+	SyncFleetdMetadataFuncInvoked bool
+
+	SyncFleetdPackageFunc        SyncFleetdPackageFunc
+	SyncFleetdPackageFuncInvoked bool
 
 	mu sync.Mutex
 }
@@ -5970,9 +5980,23 @@ func (s *Service) SyncFleetd(ctx context.Context) error {
 	return s.SyncFleetdFunc(ctx)
 }
 
-func (s *Service) SyncFleetdManifest(ctx context.Context) (*string, error) {
+func (s *Service) SyncFleetdManifest(ctx context.Context) error {
 	s.mu.Lock()
 	s.SyncFleetdManifestFuncInvoked = true
 	s.mu.Unlock()
 	return s.SyncFleetdManifestFunc(ctx)
+}
+
+func (s *Service) SyncFleetdMetadata(ctx context.Context) error {
+	s.mu.Lock()
+	s.SyncFleetdMetadataFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdMetadataFunc(ctx)
+}
+
+func (s *Service) SyncFleetdPackage(ctx context.Context) error {
+	s.mu.Lock()
+	s.SyncFleetdPackageFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdPackageFunc(ctx)
 }

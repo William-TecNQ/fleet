@@ -1686,7 +1686,9 @@ type Service interface {
 
 	// SyncFleetd triggers a sync of the Fleetd components.
 	SyncFleetd(ctx context.Context) error
-	SyncFleetdManifest(ctx context.Context) (*string, error)
+	SyncFleetdManifest(ctx context.Context) error
+	SyncFleetdMetadata(ctx context.Context) error
+	SyncFleetdPackage(ctx context.Context) error
 }
 
 type KeyValueStore interface {
