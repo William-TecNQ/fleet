@@ -1017,6 +1017,10 @@ type SendAPNSPingFunc func(ctx context.Context, hostID uint) error
 
 type DeviceSendAPNSPingFunc func(ctx context.Context, host *fleet.Host) error
 
+type SyncFleetdFunc func(ctx context.Context) error
+
+type SyncFleetdManifestFunc func(ctx context.Context) (*string, error)
+
 type Service struct {
 	EnrollOsqueryFunc        EnrollOsqueryFunc
 	EnrollOsqueryFuncInvoked bool
@@ -2511,6 +2515,12 @@ type Service struct {
 
 	DeviceSendAPNSPingFunc        DeviceSendAPNSPingFunc
 	DeviceSendAPNSPingFuncInvoked bool
+
+	SyncFleetdFunc        SyncFleetdFunc
+	SyncFleetdFuncInvoked bool
+
+	SyncFleetdManifestFunc        SyncFleetdManifestFunc
+	SyncFleetdManifestFuncInvoked bool
 
 	mu sync.Mutex
 }
@@ -5999,4 +6009,18 @@ func (s *Service) DeviceSendAPNSPing(ctx context.Context, host *fleet.Host) erro
 	s.DeviceSendAPNSPingFuncInvoked = true
 	s.mu.Unlock()
 	return s.DeviceSendAPNSPingFunc(ctx, host)
+}
+
+func (s *Service) SyncFleetd(ctx context.Context) error {
+	s.mu.Lock()
+	s.SyncFleetdFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdFunc(ctx)
+}
+
+func (s *Service) SyncFleetdManifest(ctx context.Context) (*string, error) {
+	s.mu.Lock()
+	s.SyncFleetdManifestFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdManifestFunc(ctx)
 }

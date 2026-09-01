@@ -54,6 +54,7 @@ func GetMetadata() (*Metadata, error) {
 	return &meta, nil
 }
 
+// appConfig fleet.AppConfig
 func GetPKGManifestURL() string {
 	baseURL := getBaseURL()
 	return fmt.Sprintf("%s/stable/fleetd-base-manifest.plist", baseURL)

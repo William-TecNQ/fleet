@@ -1719,6 +1719,13 @@ type Service interface {
 	// SendAPNSPing sends a ping to the specified host via APNS. Only valid for Apple hosts.
 	SendAPNSPing(ctx context.Context, hostID uint) error
 	DeviceSendAPNSPing(ctx context.Context, host *Host) error
+
+	//////////////////////////////////////////////////////////////////////////////
+	// Fleetd
+
+	// SyncFleetd triggers a sync of the Fleetd components.
+	SyncFleetd(ctx context.Context) error
+	SyncFleetdManifest(ctx context.Context) (*string, error)
 }
 
 type KeyValueStore interface {
