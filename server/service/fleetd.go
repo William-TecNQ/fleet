@@ -44,27 +44,32 @@ type Asset struct {
 }
 
 // single source of truth; the only spot that changes when the config key lands
-func (svc *Service) fleetdDir() string {
+func (svc *Service) FleetdDir() string {
 	// FUTURE: return svc.config.Server.FleetdDir when the admin config key is added
 	return DEFAULT_FLEETD_DIR
 }
 
+func (svc *Service) FleetdFilePath(ctx context.Context, name string) (string, error) {
+	svc.authz.SkipAuthorization(ctx)
+	return filepath.Join(svc.FleetdDir(), name), nil
+}
+
 func (svc *Service) saveFile(filename string, data []byte) error {
-	if err := os.MkdirAll(svc.fleetdDir(), 0o755); err != nil {
+	if err := os.MkdirAll(svc.FleetdDir(), 0o755); err != nil {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(svc.fleetdDir(), filename), data, 0o644)
+	return os.WriteFile(filepath.Join(svc.FleetdDir(), filename), data, 0o644)
 }
 
 func (svc *Service) savePackageFile(filename string, resp *http.Response) error {
-	// filepath := fmt.Sprintf("%s/%s", svc.fleetdDir(), filename)
+	// filepath := fmt.Sprintf("%s/%s", svc.FleetdDir(), filename)
 
-	if err := os.MkdirAll(svc.fleetdDir(), 0o755); err != nil {
+	if err := os.MkdirAll(svc.FleetdDir(), 0o755); err != nil {
 		return err
 	}
 
-	file, err := os.Create(filepath.Join(svc.fleetdDir(), filename))
+	file, err := os.Create(filepath.Join(svc.FleetdDir(), filename))
 	if err != nil {
 		return err
 	}
@@ -77,8 +82,6 @@ func (svc *Service) savePackageFile(filename string, resp *http.Response) error 
 
 	return file.Close()
 }
-
-type requestFleetdSyncRequest struct{}
 
 type requestFleetdSyncResponse struct {
 	Err error `json:"error,omitempty"`
@@ -226,26 +229,66 @@ func (svc *Service) SyncFleetdPackage(ctx context.Context) error {
 	return svc.savePackageFile("fleetd-base.pkg", resp)
 }
 
-type getFleetdManifestRequest struct{}
+type fleetdFileResponse struct {
+	path        string // absolute path on disk
+	filename    string // download name
+	contentType string
+	Err         error `json:"error,omitempty"`
+}
 
-type getFleetdManifestResponse struct{}
+func (r fleetdFileResponse) Error() error { return r.Err }
+
+func (r fleetdFileResponse) HijackRender(ctx context.Context, w http.ResponseWriter) {
+	f, err := os.Open(r.path)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	w.Header().Set("Content-Type", r.contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, r.filename))
+	_, _ = io.Copy(w, f)
+}
 
 func getFleetdManifestEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
-	return nil, nil
+	path, err := svc.FleetdFilePath(ctx, "fleetd-base-manifest.plist")
+	if err != nil {
+		return fleetdFileResponse{
+			Err: err,
+		}, nil
+	}
+	return fleetdFileResponse{
+		path:        path,
+		filename:    "fleetd-base-manifest.plist",
+		contentType: "application/xml",
+	}, nil
 }
-
-type getFleetdMetadataRequest struct{}
-
-type getFleetdMetadataResponse struct{}
 
 func getFleetdMetadataEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
-	return nil, nil
+	path, err := svc.FleetdFilePath(ctx, "meta.json")
+	if err != nil {
+		return fleetdFileResponse{
+			Err: err,
+		}, nil
+	}
+	return fleetdFileResponse{
+		path:        path,
+		filename:    "meta.json",
+		contentType: "application/json",
+	}, nil
 }
 
-type getFleetdPackageRequest struct{}
-
-type getFleetdPackageResponse struct{}
-
 func getFleetdPackageEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
-	return nil, nil
+	path, err := svc.FleetdFilePath(ctx, "fleetd-base.pkg")
+	if err != nil {
+		return fleetdFileResponse{
+			Err: err,
+		}, nil
+	}
+	return fleetdFileResponse{
+		path:        path,
+		filename:    "fleetd-base.pkg",
+		contentType: "application/octet-stream",
+	}, nil
 }

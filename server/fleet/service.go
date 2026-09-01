@@ -1689,6 +1689,7 @@ type Service interface {
 	SyncFleetdManifest(ctx context.Context) error
 	SyncFleetdMetadata(ctx context.Context) error
 	SyncFleetdPackage(ctx context.Context) error
+	FleetdFilePath(ctx context.Context, name string) (string, error)
 }
 
 type KeyValueStore interface {

@@ -1017,6 +1017,8 @@ type SyncFleetdMetadataFunc func(ctx context.Context) error
 
 type SyncFleetdPackageFunc func(ctx context.Context) error
 
+type FleetdFilePathFunc func(ctx context.Context, name string) (string, error)
+
 type Service struct {
 	EnrollOsqueryFunc        EnrollOsqueryFunc
 	EnrollOsqueryFuncInvoked bool
@@ -2511,6 +2513,9 @@ type Service struct {
 
 	SyncFleetdPackageFunc        SyncFleetdPackageFunc
 	SyncFleetdPackageFuncInvoked bool
+
+	FleetdFilePathFunc        FleetdFilePathFunc
+	FleetdFilePathFuncInvoked bool
 
 	mu sync.Mutex
 }
@@ -5999,4 +6004,11 @@ func (s *Service) SyncFleetdPackage(ctx context.Context) error {
 	s.SyncFleetdPackageFuncInvoked = true
 	s.mu.Unlock()
 	return s.SyncFleetdPackageFunc(ctx)
+}
+
+func (s *Service) FleetdFilePath(ctx context.Context, name string) (string, error) {
+	s.mu.Lock()
+	s.FleetdFilePathFuncInvoked = true
+	s.mu.Unlock()
+	return s.FleetdFilePathFunc(ctx, name)
 }
