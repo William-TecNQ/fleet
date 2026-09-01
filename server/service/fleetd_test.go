@@ -18,26 +18,33 @@ func TestSyncFleetdManifest(t *testing.T) {
 		}, nil
 	}
 
-	url, err := svc.SyncFleetdManifest(ctx)
+	err := svc.SyncFleetdManifest(ctx)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	require.NoError(t, err)
-	require.NotNil(t, url)
 }
 
 func TestSyncFleetdMetadata(t *testing.T) {
-	_, ctx := newTestService(t, new(mock.Store), nil, nil)
-	err := SyncFleetdMetadata(ctx)
+	ds := new(mock.Store)
+	svc, ctx := newTestService(t, ds, nil, nil)
+	ds.AppConfigFunc = func(ctx context.Context) (*fleet.AppConfig, error) {
+		return &fleet.AppConfig{
+			ServerSettings: fleet.ServerSettings{ServerURL: "https://fleet.example.com"},
+		}, nil
+	}
+
+	err := svc.SyncFleetdMetadata(ctx)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	require.NoError(t, err)
 }
 
-func TestSaveFile(t *testing.T) {
-	data := []byte("test data")
-	err := saveFile("testfile.txt", data)
+func TestSyncFleetdPackage(t *testing.T) {
+	ds := new(mock.Store)
+	svc, ctx := newTestService(t, ds, nil, nil)
+	err := svc.SyncFleetdPackage(ctx)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

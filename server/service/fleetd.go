@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/fleetdm/fleet/v4/server/fleet"
 	"howett.net/plist"
@@ -42,24 +43,28 @@ type Asset struct {
 	URL        string   `plist:"url"`
 }
 
-func saveFile(filename string, data []byte) error {
-	filepath := fmt.Sprintf("%s/%s", DEFAULT_FLEETD_DIR, filename)
-
-	if err := os.MkdirAll(DEFAULT_FLEETD_DIR, 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath, data, 0o644)
+// single source of truth; the only spot that changes when the config key lands
+func (svc *Service) fleetdDir() string {
+	// FUTURE: return svc.config.Server.FleetdDir when the admin config key is added
+	return DEFAULT_FLEETD_DIR
 }
 
-func savePackageFile(filename string, resp *http.Response) error {
-	filepath := fmt.Sprintf("%s/%s", DEFAULT_FLEETD_DIR, filename)
-
-	if err := os.MkdirAll(DEFAULT_FLEETD_DIR, 0o755); err != nil {
+func (svc *Service) saveFile(filename string, data []byte) error {
+	if err := os.MkdirAll(svc.fleetdDir(), 0o755); err != nil {
 		return err
 	}
 
-	file, err := os.Create(filepath)
+	return os.WriteFile(filepath.Join(svc.fleetdDir(), filename), data, 0o644)
+}
+
+func (svc *Service) savePackageFile(filename string, resp *http.Response) error {
+	// filepath := fmt.Sprintf("%s/%s", svc.fleetdDir(), filename)
+
+	if err := os.MkdirAll(svc.fleetdDir(), 0o755); err != nil {
+		return err
+	}
+
+	file, err := os.Create(filepath.Join(svc.fleetdDir(), filename))
 	if err != nil {
 		return err
 	}
@@ -90,19 +95,19 @@ func requestFleetdSyncEndpoint(ctx context.Context, req interface{}, svc fleet.S
 
 func (svc *Service) SyncFleetd(ctx context.Context) error {
 	// do manifest sync
-	timestamp, err := svc.SyncFleetdManifest(ctx)
+	err := svc.SyncFleetdManifest(ctx)
 	if err != nil {
 		return err
 	}
 
 	// do metadata sync
-	err = SyncFleetdMetadata(ctx)
+	err = svc.SyncFleetdMetadata(ctx)
 	if err != nil {
 		return err
 	}
 
 	// do package  sync
-	err = SyncFleetdPackage(ctx, *timestamp)
+	err = svc.SyncFleetdPackage(ctx)
 	if err != nil {
 		return err
 	}
@@ -110,38 +115,38 @@ func (svc *Service) SyncFleetd(ctx context.Context) error {
 	return nil
 }
 
-func (svc *Service) SyncFleetdManifest(ctx context.Context) (*string, error) {
+func (svc *Service) SyncFleetdManifest(ctx context.Context) error {
 	rawURL := fmt.Sprintf("%s/fleetd-base-manifest.plist", DEFAULT_FLEETD_URL)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	resp, err := http.Get(parsedURL.String())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Save the original PKG URL before modifying it
 	var manifest Manifest
 	if _, err := plist.Unmarshal(data, &manifest); err != nil {
-		return nil, err
+		return err
 	}
-	url := &manifest.Items[0].Assets[0].URL
 
+	// Get AppConfig from the datastore
 	appConfig, err := svc.ds.AppConfig(context.Background())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
@@ -150,19 +155,13 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context) (*string, error) {
 
 	manifestBytes, err := plist.Marshal(manifest, plist.XMLFormat)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Write to file
-	err = saveFile("fleetd-base-manifest.plist", manifestBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return url, nil
+	return svc.saveFile("fleetd-base-manifest.plist", manifestBytes)
 }
 
-func SyncFleetdMetadata(ctx context.Context) error {
+func (svc *Service) SyncFleetdMetadata(ctx context.Context) error {
 	rawURL := fmt.Sprintf("%s/meta.json", DEFAULT_FLEETD_URL)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
@@ -184,14 +183,31 @@ func SyncFleetdMetadata(ctx context.Context) error {
 		return err
 	}
 	var meta Metadata
-	if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
+	if err := json.Unmarshal(data, &meta); err != nil {
 		return err
 	}
-	return saveFile("meta.json", data)
+
+	appConfig, err := svc.ds.AppConfig(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
+	serverURL := appConfig.ServerSettings.ServerURL
+	meta.MSIURL = serverURL + "/api/latest/fleet/fleetd/msi"
+	meta.PKGURL = serverURL + "/api/latest/fleet/fleetd/package"
+	meta.ManifestPlistURL = serverURL + "/api/latest/fleet/fleetd/manifest"
+
+	newMeta, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+
+	return svc.saveFile("meta.json", newMeta)
 }
 
-func SyncFleetdPackage(ctx context.Context, timestamp string) error {
-	rawURL := fmt.Sprintf("%s/%s/fleetd-base.pkg", DEFAULT_FLEETD_URL, timestamp)
+func (svc *Service) SyncFleetdPackage(ctx context.Context) error {
+	rawURL := fmt.Sprintf("%s/fleetd-base.pkg", DEFAULT_FLEETD_URL)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -207,7 +223,7 @@ func SyncFleetdPackage(ctx context.Context, timestamp string) error {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	return savePackageFile("fleetd-base.pkg", resp)
+	return svc.savePackageFile("fleetd-base.pkg", resp)
 }
 
 type getFleetdManifestRequest struct{}
