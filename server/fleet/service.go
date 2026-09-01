@@ -1681,6 +1681,12 @@ type Service interface {
 	// ApplyMicrosoftGraphCredentials declaratively reconciles the stored Microsoft Graph credentials to the supplied
 	// list, verifying any new or changed credential against Graph before storing it. A tenant absent from the list is deleted.
 	ApplyMicrosoftGraphCredentials(ctx context.Context, creds []MicrosoftGraphCredential, dryRun bool) error
+	//////////////////////////////////////////////////////////////////////////////
+	// Fleetd
+
+	// SyncFleetd triggers a sync of the Fleetd components.
+	SyncFleetd(ctx context.Context) error
+	SyncFleetdManifest(ctx context.Context) (*string, error)
 }
 
 type KeyValueStore interface {

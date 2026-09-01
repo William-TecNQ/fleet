@@ -1009,6 +1009,10 @@ type ListMicrosoftGraphCredentialsFunc func(ctx context.Context) ([]*fleet.Micro
 
 type ApplyMicrosoftGraphCredentialsFunc func(ctx context.Context, creds []fleet.MicrosoftGraphCredential, dryRun bool) error
 
+type SyncFleetdFunc func(ctx context.Context) error
+
+type SyncFleetdManifestFunc func(ctx context.Context) (*string, error)
+
 type Service struct {
 	EnrollOsqueryFunc        EnrollOsqueryFunc
 	EnrollOsqueryFuncInvoked bool
@@ -2491,6 +2495,12 @@ type Service struct {
 
 	ApplyMicrosoftGraphCredentialsFunc        ApplyMicrosoftGraphCredentialsFunc
 	ApplyMicrosoftGraphCredentialsFuncInvoked bool
+
+	SyncFleetdFunc        SyncFleetdFunc
+	SyncFleetdFuncInvoked bool
+
+	SyncFleetdManifestFunc        SyncFleetdManifestFunc
+	SyncFleetdManifestFuncInvoked bool
 
 	mu sync.Mutex
 }
@@ -5951,4 +5961,18 @@ func (s *Service) ApplyMicrosoftGraphCredentials(ctx context.Context, creds []fl
 	s.ApplyMicrosoftGraphCredentialsFuncInvoked = true
 	s.mu.Unlock()
 	return s.ApplyMicrosoftGraphCredentialsFunc(ctx, creds, dryRun)
+}
+
+func (s *Service) SyncFleetd(ctx context.Context) error {
+	s.mu.Lock()
+	s.SyncFleetdFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdFunc(ctx)
+}
+
+func (s *Service) SyncFleetdManifest(ctx context.Context) (*string, error) {
+	s.mu.Lock()
+	s.SyncFleetdManifestFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdManifestFunc(ctx)
 }

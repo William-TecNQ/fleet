@@ -939,6 +939,11 @@ func attachFleetAPIRoutes(r *mux.Router, svc fleet.Service, config config.FleetC
 	ue.POST("/api/_version_/fleet/spec/certificate_authorities", batchApplyCertificateAuthoritiesEndpoint, batchApplyCertificateAuthoritiesRequest{})
 	ue.GET("/api/_version_/fleet/spec/certificate_authorities", getCertificateAuthoritiesSpecEndpoint, getCertificateAuthoritiesSpecRequest{})
 
+	ue.POST("/api/_version_/fleet/fleetd/sync", requestFleetdSyncEndpoint, requestFleetdSyncRequest{})
+	ue.GET("/api/_version_/fleet/fleetd/manifest", getFleetdManifestEndpoint, getFleetdManifestRequest{})
+	ue.GET("/api/_version_/fleet/fleetd/metadata", getFleetdMetadataEndpoint, getFleetdMetadataRequest{})
+	ue.GET("/api/_version_/fleet/fleetd/package", getFleetdPackageEndpoint, getFleetdPackageRequest{})
+
 	mdmAndroidMW := ue.WithCustomMiddleware(mdmConfiguredMiddleware.VerifyAndroidMDM())
 	mdmAndroidMW.POST("/api/_version_/fleet/software/web_apps", createAndroidWebAppEndpoint, createAndroidWebAppRequest{})
 

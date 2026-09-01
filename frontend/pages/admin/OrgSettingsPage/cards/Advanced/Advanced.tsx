@@ -255,9 +255,21 @@ const Advanced = ({
   const isPremiumLicense = isPremiumTier(appConfig);
   const [showSyncSpinner, setShowSyncSpinner] = useState(false);
 
-  const onSync = () => {
+  const onSync = async () => {
     setShowSyncSpinner(true);
-    setTimeout(() => setShowSyncSpinner(false), 2000);
+    try {
+      await fetch("https://download.fleetdm.com/stable/meta.json", {
+        method: "GET",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Fetched metadata successfully", data);
+          setTimeout(() => setShowSyncSpinner(false), 2000);
+        });
+    } catch {
+      console.error("Failed to fetch metadata");
+      setShowSyncSpinner(false);
+    }
   };
 
   return (
