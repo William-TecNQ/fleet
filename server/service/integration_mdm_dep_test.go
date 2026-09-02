@@ -900,6 +900,8 @@ func (s *integrationMDMTestSuite) TestDEPProfileAssignment() {
 		// run the worker to process the DEP enroll request
 		s.awaitRunAppleMDMWorkerSchedule()
 
+		appCfg, err := s.ds.AppConfig(ctx)
+		require.NoError(t, err)
 		var seenDeclarativeManagement bool
 		var fleetdCmd, installProfileCmd *micromdm.CommandPayload
 		cmd, err := mdmDevice.Idle()
@@ -916,7 +918,7 @@ func (s *integrationMDMTestSuite) TestDEPProfileAssignment() {
 			require.NoError(t, plist.Unmarshal(cmd.Raw, &fullCmd))
 			if fullCmd.Command.RequestType == "InstallEnterpriseApplication" &&
 				fullCmd.Command.InstallEnterpriseApplication.ManifestURL != nil &&
-				strings.Contains(*fullCmd.Command.InstallEnterpriseApplication.ManifestURL, fleetdbase.GetPKGManifestURL()) {
+				strings.Contains(*fullCmd.Command.InstallEnterpriseApplication.ManifestURL, fleetdbase.GetPKGManifestURL(*appCfg)) {
 				fleetdCmd = &fullCmd
 			} else if cmd.Command.RequestType == "InstallProfile" {
 				installProfileCmd = &fullCmd
@@ -2135,6 +2137,8 @@ func (s *integrationMDMTestSuite) TestReenrollingADEDeviceAfterRemovingItFromABM
 		// run the worker to assign configuration profiles
 		s.awaitTriggerProfileSchedule(t)
 
+		appCfg, err := s.ds.AppConfig(ctx)
+		require.NoError(t, err)
 		var fleetdCmd, installProfileCmd *micromdm.CommandPayload
 		cmd, err := mdmDevice.Idle()
 		require.NoError(t, err)
@@ -2149,7 +2153,7 @@ func (s *integrationMDMTestSuite) TestReenrollingADEDeviceAfterRemovingItFromABM
 			require.NoError(t, plist.Unmarshal(cmd.Raw, &fullCmd))
 			if fullCmd.Command.RequestType == "InstallEnterpriseApplication" &&
 				fullCmd.Command.InstallEnterpriseApplication.ManifestURL != nil &&
-				strings.Contains(*fullCmd.Command.InstallEnterpriseApplication.ManifestURL, fleetdbase.GetPKGManifestURL()) {
+				strings.Contains(*fullCmd.Command.InstallEnterpriseApplication.ManifestURL, fleetdbase.GetPKGManifestURL(*appCfg)) {
 				fleetdCmd = &fullCmd
 			} else if cmd.Command.RequestType == "InstallProfile" {
 				installProfileCmd = &fullCmd

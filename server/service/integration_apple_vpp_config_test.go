@@ -502,7 +502,7 @@ func (s *integrationMDMTestSuite) TestVPPManagedConfigurationOnInstallCommand() 
 		// Drain the InstallFleetd command queued by enrollment.
 		s.awaitRunAppleMDMWorkerSchedule()
 		s.runWorker()
-		checkInstallFleetdCommandSent(t, macDev, true)
+		s.checkInstallFleetdCommandSent(t, macDev, true)
 
 		raw := string(installAndCaptureCmd(t, macHost, macDev,
 			titleIDFor(adamMac, fleet.MacOSPlatform),

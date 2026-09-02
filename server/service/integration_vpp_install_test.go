@@ -147,13 +147,13 @@ func (s *integrationMDMTestSuite) TestVPPAppInstallVerification() {
 	setOrbitEnrollment(t, mdmHost, s.ds)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, mdmDevice, true)
+	s.checkInstallFleetdCommandSent(t, mdmDevice, true)
 	selfServiceHost, selfServiceDevice := createHostThenEnrollMDM(s.ds, s.server.URL, t)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
 	setOrbitEnrollment(t, selfServiceHost, s.ds)
 	selfServiceToken := "selfservicetoken"
-	checkInstallFleetdCommandSent(t, selfServiceDevice, true)
+	s.checkInstallFleetdCommandSent(t, selfServiceDevice, true)
 	updateDeviceTokenForHost(t, s.ds, selfServiceHost.ID, selfServiceToken)
 	s.appleVPPConfigSrvConfig.SerialNumbers = append(s.appleVPPConfigSrvConfig.SerialNumbers, selfServiceDevice.SerialNumber)
 
@@ -795,7 +795,7 @@ func (s *integrationMDMTestSuite) TestVPPAppInstallVerification() {
 	mdmDevice = enrollMacOSHostInMDMManually(t, mdmHost, s.ds, s.server.URL)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, mdmDevice, true)
+	s.checkInstallFleetdCommandSent(t, mdmDevice, true)
 
 	// Trigger install to the host
 	installResp = installSoftwareResponse{}
@@ -1261,7 +1261,7 @@ func (s *integrationMDMTestSuite) TestVPPAppActivitiesOnCancelInstall() {
 	setOrbitEnrollment(t, controlHost, s.ds)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, controlDevice, true)
+	s.checkInstallFleetdCommandSent(t, controlDevice, true)
 	// Add serial number to our fake Apple server
 	s.appleVPPConfigSrvConfig.SerialNumbers = append(s.appleVPPConfigSrvConfig.SerialNumbers, controlHost.HardwareSerial)
 	s.Do("POST", "/api/latest/fleet/hosts/transfer",
@@ -1278,7 +1278,7 @@ func (s *integrationMDMTestSuite) TestVPPAppActivitiesOnCancelInstall() {
 	setOrbitEnrollment(t, mdmHost, s.ds)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, mdmDevice, true)
+	s.checkInstallFleetdCommandSent(t, mdmDevice, true)
 	// Add serial number to our fake Apple server
 	s.appleVPPConfigSrvConfig.SerialNumbers = append(s.appleVPPConfigSrvConfig.SerialNumbers, mdmHost.HardwareSerial)
 	s.Do("POST", "/api/latest/fleet/hosts/transfer",
@@ -1347,7 +1347,7 @@ func (s *integrationMDMTestSuite) TestVPPAppActivitiesOnCancelInstall() {
 	setOrbitEnrollment(t, mdmHost2, s.ds)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, mdmDevice2, true)
+	s.checkInstallFleetdCommandSent(t, mdmDevice2, true)
 	// Add serial number to our fake Apple server
 	s.appleVPPConfigSrvConfig.SerialNumbers = append(s.appleVPPConfigSrvConfig.SerialNumbers, mdmHost2.HardwareSerial)
 	s.Do("POST", "/api/latest/fleet/hosts/transfer",
@@ -2833,7 +2833,7 @@ func (s *integrationMDMTestSuite) TestVPPAppInstallVerificationXcodeSpecialCase(
 	setOrbitEnrollment(t, mdmHost, s.ds)
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, mdmDevice, true)
+	s.checkInstallFleetdCommandSent(t, mdmDevice, true)
 
 	// Add serial number to our fake Apple server
 	s.appleVPPConfigSrvConfig.SerialNumbers = append(s.appleVPPConfigSrvConfig.SerialNumbers, mdmHost.HardwareSerial)
@@ -2986,7 +2986,7 @@ func (s *integrationMDMTestSuite) TestVPPAppInstallVerificationXcodeSpecialCase(
 	mdmHost2.OrbitNodeKey = ptr.String(setOrbitEnrollment(t, mdmHost2, s.ds))
 	s.awaitRunAppleMDMWorkerSchedule()
 	s.runWorker()
-	checkInstallFleetdCommandSent(t, mdmDevice2, true)
+	s.checkInstallFleetdCommandSent(t, mdmDevice2, true)
 
 	s.appleVPPConfigSrvConfig.SerialNumbers = append(s.appleVPPConfigSrvConfig.SerialNumbers, mdmHost2.HardwareSerial)
 	s.Do("POST", "/api/latest/fleet/hosts/transfer",
