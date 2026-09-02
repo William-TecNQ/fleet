@@ -1140,7 +1140,7 @@ func attachFleetAPIRoutes(r *mux.Router, svc fleet.Service, config config.FleetC
 		POST("/api/osquery/enroll", enrollAgentEndpoint, contract.EnrollOsqueryAgentRequest{})
 	ne.GET("/api/_version_/fleet/fleetd/manifest", getFleetdManifestEndpoint, nil)
 	ne.GET("/api/_version_/fleet/fleetd/metadata", getFleetdMetadataEndpoint, nil)
-	ne.GET("/api/_version_/fleet/fleetd/package", getFleetdPackageEndpoint, nil)
+	ne.GET("/api/_version_/fleet/fleetd/pkg", getFleetdPackageEndpoint, nil)
 	// These endpoint are token authenticated.
 	// NOTE: remember to update
 	// `service.mdmConfigurationRequiredEndpoints` when you add an

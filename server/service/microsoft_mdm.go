@@ -1513,16 +1513,16 @@ func (svc *Service) enqueueInstallFleetdCommand(ctx context.Context, deviceID st
 	// it's okay to skip the installation if we're not able to retrieve the
 	// metadata, we don't want to completely error the SyncML transaction
 	// and we'll try again the next time the host checks in
-	fleetdMetadata, err := fleetdbase.GetMetadata()
+	appCfg, err := svc.ds.AppConfig(ctx)
+	if err != nil {
+		return ctxerr.Wrap(ctx, err, "getting app config")
+	}
+	fleetdMetadata, err := fleetdbase.GetMetadata(*appCfg)
 	if err != nil {
 		svc.logger.WarnContext(ctx, "unable to get fleetd-base metadata")
 		return nil
 	}
 
-	appCfg, err := svc.ds.AppConfig(ctx)
-	if err != nil {
-		return ctxerr.Wrap(ctx, err, "getting app config")
-	}
 	fleetURL := appCfg.ServerSettings.ServerURL
 	globalEnrollSecret := secrets[0].Secret
 	// Fleet-internal CmdID: the Add is injected inline and is never its own tracked queue command. The Exec command is

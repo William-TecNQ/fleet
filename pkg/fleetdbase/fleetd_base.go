@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/fleetdm/fleet/v4/server/dev_mode"
+	"github.com/fleetdm/fleet/v4/server/fleet"
 )
 
 type Metadata struct {
@@ -19,17 +20,26 @@ type Metadata struct {
 	Version          string `json:"version"`
 }
 
-func getBaseURL() string {
+func getBaseURL(appConfig fleet.AppConfig) string {
 	devURL := dev_mode.Env("FLEET_DEV_DOWNLOAD_FLEETDM_URL")
 	if devURL != "" {
 		return devURL
 	}
+	if appConfig.ServerSettings.EnableLocalServeFleetd {
+		return appConfig.ServerSettings.ServerURL
+	}
 	return "https://download.fleetdm.com"
 }
 
-func GetMetadata() (*Metadata, error) {
-	baseURL := getBaseURL()
-	rawURL := fmt.Sprintf("%s/stable/meta.json", baseURL)
+func GetMetadata(appConfig fleet.AppConfig) (*Metadata, error) {
+	baseURL := getBaseURL(appConfig)
+
+	var rawURL string
+	if appConfig.ServerSettings.EnableLocalServeFleetd {
+		rawURL = fmt.Sprintf("%s/api/latest/fleet/fleetd/metadata", baseURL)
+	} else {
+		rawURL = fmt.Sprintf("%s/stable/meta.json", baseURL)
+	}
 
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
@@ -54,8 +64,10 @@ func GetMetadata() (*Metadata, error) {
 	return &meta, nil
 }
 
-// appConfig fleet.AppConfig
-func GetPKGManifestURL() string {
-	baseURL := getBaseURL()
+func GetPKGManifestURL(appConfig fleet.AppConfig) string {
+	baseURL := getBaseURL(appConfig)
+	if appConfig.ServerSettings.EnableLocalServeFleetd {
+		return fmt.Sprintf("%s/api/latest/fleet/fleetd/manifest", baseURL)
+	}
 	return fmt.Sprintf("%s/stable/fleetd-base-manifest.plist", baseURL)
 }

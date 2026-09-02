@@ -157,7 +157,7 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context) error {
 
 	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
 	serverURL := appConfig.ServerSettings.ServerURL
-	manifest.Items[0].Assets[0].URL = serverURL + "/api/latest/fleet/fleetd/package"
+	manifest.Items[0].Assets[0].URL = serverURL + "/api/latest/fleet/fleetd/pkg"
 
 	manifestBytes, err := plist.Marshal(manifest, plist.XMLFormat)
 	if err != nil {
@@ -201,7 +201,7 @@ func (svc *Service) SyncFleetdMetadata(ctx context.Context) error {
 	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
 	serverURL := appConfig.ServerSettings.ServerURL
 	meta.MSIURL = serverURL + "/api/latest/fleet/fleetd/msi"
-	meta.PKGURL = serverURL + "/api/latest/fleet/fleetd/package"
+	meta.PKGURL = serverURL + "/api/latest/fleet/fleetd/pkg"
 	meta.ManifestPlistURL = serverURL + "/api/latest/fleet/fleetd/manifest"
 
 	newMeta, err := json.Marshal(meta)
