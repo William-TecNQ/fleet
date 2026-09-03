@@ -149,6 +149,7 @@ type ServerConfig struct {
 	DefaultMaxRequestBodySize        int64         `yaml:"default_max_request_body_size"`
 	AllowPrivateNetworkIntegrations  bool          `yaml:"allow_private_network_integrations"`
 	BypassNetworkBlocking            bool          `yaml:"bypass_network_blocking"`
+	FleetdDir                        string        `yaml:"fleetd_dir"`
 	EndpointRequestSizeOverrides     EndpointRequestSizeOverrides
 }
 
