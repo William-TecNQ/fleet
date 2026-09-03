@@ -1687,8 +1687,9 @@ type Service interface {
 	// SyncFleetd triggers a sync of the Fleetd components.
 	SyncFleetd(ctx context.Context) error
 	SyncFleetdMetadata(ctx context.Context) (*string, error)
+	SyncFleetdPKG(ctx context.Context, version *string) error
+	SyncFleetdMSI(ctx context.Context, version *string) error
 	SyncFleetdManifest(ctx context.Context, version *string) error
-	SyncFleetdPackage(ctx context.Context, version *string) error
 	FleetdFilePath(ctx context.Context, name string) (string, error)
 }
 

@@ -59,5 +59,5 @@ func TestSyncFleetdPackage(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, version)
 
-	require.NoError(t, svc.SyncFleetdPackage(ctx, version))
+	require.NoError(t, svc.SyncFleetdPKG(ctx, version))
 }
