@@ -42,6 +42,11 @@ type Service struct {
 	config         config.FleetConfig
 	clock          clock.Clock
 
+	// fleetdDir is the on-disk location where synced fleetd base files are
+	// stored and served from. Populated from config (server.fleetd_dir /
+	// FLEET_SERVER_FLEETD_DIR) at construction; tests may set it to a temp dir.
+	fleetdDir string
+
 	osqueryLogWriter *OsqueryLogger
 
 	mailService     fleet.MailService
@@ -182,6 +187,7 @@ func NewService(
 		logger:            logger,
 		config:            config,
 		clock:             c,
+		fleetdDir:         config.Server.FleetdDir,
 		osqueryLogWriter:  osqueryLogger,
 		mailService:       mailService,
 		ssoSessionStore:   sso,

@@ -1011,11 +1011,11 @@ type ApplyMicrosoftGraphCredentialsFunc func(ctx context.Context, creds []fleet.
 
 type SyncFleetdFunc func(ctx context.Context) error
 
-type SyncFleetdManifestFunc func(ctx context.Context) error
+type SyncFleetdMetadataFunc func(ctx context.Context) (*string, error)
 
-type SyncFleetdMetadataFunc func(ctx context.Context) error
+type SyncFleetdManifestFunc func(ctx context.Context, version *string) error
 
-type SyncFleetdPackageFunc func(ctx context.Context) error
+type SyncFleetdPackageFunc func(ctx context.Context, version *string) error
 
 type FleetdFilePathFunc func(ctx context.Context, name string) (string, error)
 
@@ -2505,11 +2505,11 @@ type Service struct {
 	SyncFleetdFunc        SyncFleetdFunc
 	SyncFleetdFuncInvoked bool
 
-	SyncFleetdManifestFunc        SyncFleetdManifestFunc
-	SyncFleetdManifestFuncInvoked bool
-
 	SyncFleetdMetadataFunc        SyncFleetdMetadataFunc
 	SyncFleetdMetadataFuncInvoked bool
+
+	SyncFleetdManifestFunc        SyncFleetdManifestFunc
+	SyncFleetdManifestFuncInvoked bool
 
 	SyncFleetdPackageFunc        SyncFleetdPackageFunc
 	SyncFleetdPackageFuncInvoked bool
@@ -5985,25 +5985,25 @@ func (s *Service) SyncFleetd(ctx context.Context) error {
 	return s.SyncFleetdFunc(ctx)
 }
 
-func (s *Service) SyncFleetdManifest(ctx context.Context) error {
-	s.mu.Lock()
-	s.SyncFleetdManifestFuncInvoked = true
-	s.mu.Unlock()
-	return s.SyncFleetdManifestFunc(ctx)
-}
-
-func (s *Service) SyncFleetdMetadata(ctx context.Context) error {
+func (s *Service) SyncFleetdMetadata(ctx context.Context) (*string, error) {
 	s.mu.Lock()
 	s.SyncFleetdMetadataFuncInvoked = true
 	s.mu.Unlock()
 	return s.SyncFleetdMetadataFunc(ctx)
 }
 
-func (s *Service) SyncFleetdPackage(ctx context.Context) error {
+func (s *Service) SyncFleetdManifest(ctx context.Context, version *string) error {
+	s.mu.Lock()
+	s.SyncFleetdManifestFuncInvoked = true
+	s.mu.Unlock()
+	return s.SyncFleetdManifestFunc(ctx, version)
+}
+
+func (s *Service) SyncFleetdPackage(ctx context.Context, version *string) error {
 	s.mu.Lock()
 	s.SyncFleetdPackageFuncInvoked = true
 	s.mu.Unlock()
-	return s.SyncFleetdPackageFunc(ctx)
+	return s.SyncFleetdPackageFunc(ctx, version)
 }
 
 func (s *Service) FleetdFilePath(ctx context.Context, name string) (string, error) {

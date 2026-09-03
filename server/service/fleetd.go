@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	DEFAULT_FLEETD_DIR = "/srv/fleet/fleetd"
-	DEFAULT_FLEETD_URL = "https://download.fleetdm.com/stable"
+	DEFAULT_FLEETD_DIR         = "/srv/fleet/fleetd"
+	DEFAULT_FLEETD_URL         = "https://download.fleetdm.com/stable"
+	DEFAULT_FLEETD_ARCHIVE_URL = "https://download.fleetdm.com/archive/stable"
 )
 
 type Metadata struct {
@@ -43,9 +44,14 @@ type Asset struct {
 	URL        string   `plist:"url"`
 }
 
-// single source of truth; the only spot that changes when the config key lands
+// FleetdDir is the on-disk location where synced fleetd base artifacts are
+// stored and served from. It is populated from config (server.fleetd_dir) at
+// construction; the constant is a defensive fallback for a zero-value config
+// (e.g. a Service built directly in a test).
 func (svc *Service) FleetdDir() string {
-	// FUTURE: return svc.config.Server.FleetdDir when the admin config key is added
+	if svc.fleetdDir != "" {
+		return svc.fleetdDir
+	}
 	return DEFAULT_FLEETD_DIR
 }
 
@@ -100,29 +106,76 @@ func (svc *Service) SyncFleetd(ctx context.Context) error {
 	if err := svc.authz.Authorize(ctx, &fleet.AppConfig{}, fleet.ActionWrite); err != nil {
 		return err
 	}
-	// do manifest sync
-	err := svc.SyncFleetdManifest(ctx)
-	if err != nil {
-		return err
-	}
 
 	// do metadata sync
-	err = svc.SyncFleetdMetadata(ctx)
+	version, err := svc.SyncFleetdMetadata(ctx)
 	if err != nil {
 		return err
 	}
 
-	// do package  sync
-	err = svc.SyncFleetdPackage(ctx)
-	if err != nil {
+	// do manifest sync
+	if err := svc.SyncFleetdManifest(ctx, version); err != nil {
+		return err
+	}
+
+	// do package sync
+	if err := svc.SyncFleetdPackage(ctx, version); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (svc *Service) SyncFleetdManifest(ctx context.Context) error {
-	rawURL := fmt.Sprintf("%s/fleetd-base-manifest.plist", DEFAULT_FLEETD_URL)
+func (svc *Service) SyncFleetdMetadata(ctx context.Context) (*string, error) {
+	rawURL := fmt.Sprintf("%s/meta.json", DEFAULT_FLEETD_URL)
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Get(parsedURL.String())
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var meta Metadata
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return nil, err
+	}
+
+	appConfig, err := svc.ds.AppConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	// Get installer version from meta.json
+	version := meta.Version
+
+	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
+	serverURL := appConfig.ServerSettings.ServerURL
+	meta.MSIURL = serverURL + "/api/latest/fleet/fleetd/msi"
+	meta.PKGURL = serverURL + "/api/latest/fleet/fleetd/pkg"
+	meta.ManifestPlistURL = serverURL + "/api/latest/fleet/fleetd/manifest"
+
+	newMeta, err := json.Marshal(meta)
+	if err != nil {
+		return nil, err
+	}
+
+	return &version, svc.saveFile("meta.json", newMeta)
+}
+
+func (svc *Service) SyncFleetdManifest(ctx context.Context, version *string) error {
+	rawURL := fmt.Sprintf("%s/%v/fleetd-base-manifest.plist", DEFAULT_FLEETD_ARCHIVE_URL, *version)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -135,7 +188,7 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code: %d, for site %s", resp.StatusCode, parsedURL.String())
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -167,53 +220,8 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context) error {
 	return svc.saveFile("fleetd-base-manifest.plist", manifestBytes)
 }
 
-func (svc *Service) SyncFleetdMetadata(ctx context.Context) error {
-	rawURL := fmt.Sprintf("%s/meta.json", DEFAULT_FLEETD_URL)
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Get(parsedURL.String())
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	var meta Metadata
-	if err := json.Unmarshal(data, &meta); err != nil {
-		return err
-	}
-
-	appConfig, err := svc.ds.AppConfig(context.Background())
-	if err != nil {
-		return err
-	}
-
-	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
-	serverURL := appConfig.ServerSettings.ServerURL
-	meta.MSIURL = serverURL + "/api/latest/fleet/fleetd/msi"
-	meta.PKGURL = serverURL + "/api/latest/fleet/fleetd/pkg"
-	meta.ManifestPlistURL = serverURL + "/api/latest/fleet/fleetd/manifest"
-
-	newMeta, err := json.Marshal(meta)
-	if err != nil {
-		return err
-	}
-
-	return svc.saveFile("meta.json", newMeta)
-}
-
-func (svc *Service) SyncFleetdPackage(ctx context.Context) error {
-	rawURL := fmt.Sprintf("%s/fleetd-base.pkg", DEFAULT_FLEETD_URL)
+func (svc *Service) SyncFleetdPackage(ctx context.Context, version *string) error {
+	rawURL := fmt.Sprintf("%s/%v/fleetd-base.pkg", DEFAULT_FLEETD_ARCHIVE_URL, *version)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return err
