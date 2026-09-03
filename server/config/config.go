@@ -1572,6 +1572,7 @@ func (man Manager) addConfigs() {
 	man.addConfigBool("server.allow_private_network_integrations", false, "Allow integration HTTP requests to private network addresses (RFC 1918). Loopback and cloud metadata addresses are always blocked regardless of this setting.")
 	man.addConfigBool("server.bypass_network_blocking", false, "Disable all outbound network blocking protections for integration HTTP requests (loopback, cloud metadata, and private network addresses). Only intended for environments where egress is already constrained by external infrastructure (e.g. an egress proxy or firewall) that Fleet's own checks would otherwise conflict with. This is an infrastructure-level setting and cannot be changed at runtime.")
 	man.addConfigByteSize("server.default_max_request_body_size", installersize.Human(platform_http.MaxRequestBodySize), "Default maximum size in bytes for request bodies, certain endpoints will have higher limits (e.g. 10MiB, 500KB, 1G)")
+	man.addConfigString("server.fleetd_dir", "/srv/fleet/fleetd", "Directory where synced fleetd base artifacts (metadata, manifest, package) are stored and served from")
 	man.addConfigString(EndpointRequestSizeOverridesKey, "", "Per-endpoint max request body size overrides, as a list of {endpoint, max_request_size} objects")
 
 	// Hide the sandbox flag as we don't want it to be discoverable for users for now
@@ -2120,6 +2121,7 @@ func (man Manager) LoadConfig() FleetConfig {
 			DefaultMaxRequestBodySize:        man.getConfigByteSize("server.default_max_request_body_size"),
 			AllowPrivateNetworkIntegrations:  man.getConfigBool("server.allow_private_network_integrations"),
 			BypassNetworkBlocking:            man.getConfigBool("server.bypass_network_blocking"),
+			FleetdDir:                        man.getConfigString("server.fleetd_dir"),
 			EndpointRequestSizeOverrides:     man.getConfigEndpointRequestSizeOverrides(),
 		},
 		Auth: AuthConfig{
