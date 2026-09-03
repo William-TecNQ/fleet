@@ -89,6 +89,9 @@ func (svc *Service) savePackageFile(filename string, resp *http.Response) error 
 	return file.Close()
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Endpoints and response types for Fleetd synchronization requests.
+
 type requestFleetdSyncResponse struct {
 	Err error `json:"error,omitempty"`
 }
@@ -113,13 +116,18 @@ func (svc *Service) SyncFleetd(ctx context.Context) error {
 		return err
 	}
 
-	// do manifest sync
-	if err := svc.SyncFleetdManifest(ctx, version); err != nil {
+	// do pkg sync
+	if err := svc.SyncFleetdPKG(ctx, version); err != nil {
 		return err
 	}
 
-	// do package sync
-	if err := svc.SyncFleetdPackage(ctx, version); err != nil {
+	// do msi sync
+	if err := svc.SyncFleetdMSI(ctx, version); err != nil {
+		return err
+	}
+
+	// do manifest sync
+	if err := svc.SyncFleetdManifest(ctx, version); err != nil {
 		return err
 	}
 
@@ -174,6 +182,46 @@ func (svc *Service) SyncFleetdMetadata(ctx context.Context) (*string, error) {
 	return &version, svc.saveFile("meta.json", newMeta)
 }
 
+func (svc *Service) SyncFleetdMSI(ctx context.Context, version *string) error {
+	rawURL := fmt.Sprintf("%s/%v/fleetd-base.msi", DEFAULT_FLEETD_ARCHIVE_URL, *version)
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Get(parsedURL.String())
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return svc.savePackageFile("fleetd-base.msi", resp)
+}
+
+func (svc *Service) SyncFleetdPKG(ctx context.Context, version *string) error {
+	rawURL := fmt.Sprintf("%s/%v/fleetd-base.pkg", DEFAULT_FLEETD_ARCHIVE_URL, *version)
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Get(parsedURL.String())
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return svc.savePackageFile("fleetd-base.pkg", resp)
+}
+
 func (svc *Service) SyncFleetdManifest(ctx context.Context, version *string) error {
 	rawURL := fmt.Sprintf("%s/%v/fleetd-base-manifest.plist", DEFAULT_FLEETD_ARCHIVE_URL, *version)
 	parsedURL, err := url.Parse(rawURL)
@@ -220,25 +268,8 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context, version *string) err
 	return svc.saveFile("fleetd-base-manifest.plist", manifestBytes)
 }
 
-func (svc *Service) SyncFleetdPackage(ctx context.Context, version *string) error {
-	rawURL := fmt.Sprintf("%s/%v/fleetd-base.pkg", DEFAULT_FLEETD_ARCHIVE_URL, *version)
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Get(parsedURL.String())
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return svc.savePackageFile("fleetd-base.pkg", resp)
-}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fleetd file response and endpoints for serving Fleetd-related files (meta, package, MSI, manifest)
 
 type fleetdFileResponse struct {
 	path        string // absolute path on disk
@@ -262,20 +293,6 @@ func (r fleetdFileResponse) HijackRender(ctx context.Context, w http.ResponseWri
 	_, _ = io.Copy(w, f)
 }
 
-func getFleetdManifestEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
-	path, err := svc.FleetdFilePath(ctx, "fleetd-base-manifest.plist")
-	if err != nil {
-		return fleetdFileResponse{
-			Err: err,
-		}, nil
-	}
-	return fleetdFileResponse{
-		path:        path,
-		filename:    "fleetd-base-manifest.plist",
-		contentType: "application/xml",
-	}, nil
-}
-
 func getFleetdMetadataEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
 	path, err := svc.FleetdFilePath(ctx, "meta.json")
 	if err != nil {
@@ -290,7 +307,7 @@ func getFleetdMetadataEndpoint(ctx context.Context, req any, svc fleet.Service) 
 	}, nil
 }
 
-func getFleetdPackageEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
+func getFleetdPKGEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
 	path, err := svc.FleetdFilePath(ctx, "fleetd-base.pkg")
 	if err != nil {
 		return fleetdFileResponse{
@@ -301,5 +318,33 @@ func getFleetdPackageEndpoint(ctx context.Context, req any, svc fleet.Service) (
 		path:        path,
 		filename:    "fleetd-base.pkg",
 		contentType: "application/octet-stream",
+	}, nil
+}
+
+func getFleetdMSIEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
+	path, err := svc.FleetdFilePath(ctx, "fleetd-base.msi")
+	if err != nil {
+		return fleetdFileResponse{
+			Err: err,
+		}, nil
+	}
+	return fleetdFileResponse{
+		path:        path,
+		filename:    "fleetd-base.msi",
+		contentType: "application/octet-stream",
+	}, nil
+}
+
+func getFleetdManifestEndpoint(ctx context.Context, req any, svc fleet.Service) (fleet.Errorer, error) {
+	path, err := svc.FleetdFilePath(ctx, "fleetd-base-manifest.plist")
+	if err != nil {
+		return fleetdFileResponse{
+			Err: err,
+		}, nil
+	}
+	return fleetdFileResponse{
+		path:        path,
+		filename:    "fleetd-base-manifest.plist",
+		contentType: "application/xml",
 	}, nil
 }
