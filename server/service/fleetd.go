@@ -143,12 +143,12 @@ func (svc *Service) SyncFleetdMetadata(ctx context.Context) (*string, error) {
 
 	resp, err := http.Get(parsedURL.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s", err, rawURL)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code when fetching from %s: %d", rawURL, resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -183,7 +183,7 @@ func (svc *Service) SyncFleetdMetadata(ctx context.Context) (*string, error) {
 }
 
 func (svc *Service) SyncFleetdMSI(ctx context.Context, version *string) error {
-	rawURL := fmt.Sprintf("%s/%v/fleetd-base.msi", DEFAULT_FLEETD_ARCHIVE_URL, *version)
+	rawURL := fmt.Sprintf("%s/%s/fleetd-base.msi", DEFAULT_FLEETD_ARCHIVE_URL, *version)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -191,19 +191,19 @@ func (svc *Service) SyncFleetdMSI(ctx context.Context, version *string) error {
 
 	resp, err := http.Get(parsedURL.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %s", err, rawURL)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code when fetching from %s: %d", rawURL, resp.StatusCode)
 	}
 
 	return svc.savePackageFile("fleetd-base.msi", resp)
 }
 
 func (svc *Service) SyncFleetdPKG(ctx context.Context, version *string) error {
-	rawURL := fmt.Sprintf("%s/%v/fleetd-base.pkg", DEFAULT_FLEETD_ARCHIVE_URL, *version)
+	rawURL := fmt.Sprintf("%s/%s/fleetd-base.pkg", DEFAULT_FLEETD_ARCHIVE_URL, *version)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -211,19 +211,19 @@ func (svc *Service) SyncFleetdPKG(ctx context.Context, version *string) error {
 
 	resp, err := http.Get(parsedURL.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %s", err, rawURL)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code when fetching from %s: %d", rawURL, resp.StatusCode)
 	}
 
 	return svc.savePackageFile("fleetd-base.pkg", resp)
 }
 
 func (svc *Service) SyncFleetdManifest(ctx context.Context, version *string) error {
-	rawURL := fmt.Sprintf("%s/%v/fleetd-base-manifest.plist", DEFAULT_FLEETD_ARCHIVE_URL, *version)
+	rawURL := fmt.Sprintf("%s/%s/fleetd-base-manifest.plist", DEFAULT_FLEETD_ARCHIVE_URL, *version)
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -231,12 +231,12 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context, version *string) err
 
 	resp, err := http.Get(parsedURL.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %s", err, rawURL)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d, for site %s", resp.StatusCode, parsedURL.String())
+		return fmt.Errorf("unexpected status code when fetching from %s: %d", rawURL, resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -244,19 +244,16 @@ func (svc *Service) SyncFleetdManifest(ctx context.Context, version *string) err
 		return err
 	}
 
-	// Save the original PKG URL before modifying it
 	var manifest Manifest
 	if _, err := plist.Unmarshal(data, &manifest); err != nil {
 		return err
 	}
 
-	// Get AppConfig from the datastore
 	appConfig, err := svc.ds.AppConfig(context.Background())
 	if err != nil {
 		return err
 	}
 
-	// Change the PKG URL to point to the server's API endpoint instead of the FleetDM repository
 	serverURL := appConfig.ServerSettings.ServerURL
 	manifest.Items[0].Assets[0].URL = serverURL + "/api/latest/fleet/fleetd/pkg"
 

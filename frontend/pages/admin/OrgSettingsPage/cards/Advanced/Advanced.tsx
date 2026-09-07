@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 
 import { IInputFieldParseTarget } from "interfaces/form_field";
 import { HistoricalDataConfigKey } from "interfaces/charts";
+import { getErrorReason } from "interfaces/errors";
 import configAPI from "services/entities/config";
 
 import validUrl from "components/forms/validators/valid_url";
@@ -266,8 +267,14 @@ const Advanced = ({
     try {
       await configAPI.syncFleetd();
       notify.success("Successfully synced required Fleetd files");
-    } catch {
-      notify.error("Failed to fetch required Fleetd files");
+    } catch (response) {
+      const reason = getErrorReason(response);
+      notify.error(
+        reason
+          ? `Failed to fetch required Fleetd files: ${reason}`
+          : "Failed to fetch required Fleetd files",
+        { response, detailLabel: "Fleetd sync error" }
+      );
     } finally {
       setShowSyncSpinner(false);
     }
