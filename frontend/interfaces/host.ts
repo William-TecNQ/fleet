@@ -574,6 +574,7 @@ export interface IHost {
   mdm_options?: IHostMdmAppleDeviceVitalsMdmOptions;
   device_properties_attestation?: string[];
   service_subscriptions?: IHostMdmAppleServiceSubscription[];
+  is_shared_ipad?: boolean;
   // Android-only vitals collected from AMAPI status reports.
   // Omitted entirely (not just null) for every other platform, and for any
   // field the device didn't report.

@@ -212,7 +212,8 @@ type VitalKey =
   | "organization_info"
   | "mdm_options"
   | "device_properties_attestation"
-  | "service_subscriptions";
+  | "service_subscriptions"
+  | "is_shared_ipad";
 
 interface IVital {
   key: VitalKey;
@@ -410,6 +411,11 @@ const VITALS: IVital[] = [
     label: "Service subscriptions",
     render: (host) => renderServiceSubscriptions(host.service_subscriptions),
     multiline: true,
+  },
+  {
+    key: "is_shared_ipad",
+    label: "Shared iPad",
+    render: (host) => renderBoolean(host.is_shared_ipad),
   },
   {
     key: "supplemental_build_version",
